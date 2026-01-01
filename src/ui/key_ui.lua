@@ -7,8 +7,6 @@ local KeyUI = {}
 KeyUI.__index = KeyUI
 
 local TweenService = game:GetService("TweenService")
-local UserInputService = game:GetService("UserInputService")
-local Players = game:GetService("Players")
 
 local GITHUB_RAW = "https://raw.githubusercontent.com/flipgag746-sudo/WindHub/main/src/"
 
@@ -68,15 +66,7 @@ local function addHoverEffect(button, normalColor, hoverColor)
     end)
 end
 
-local function addClickEffect(button)
-    button.MouseButton1Down:Connect(function()
-        createTween(button, {Size = UDim2.new(button.Size.X.Scale * 0.95, 0, button.Size.Y.Scale * 0.95, 0)}, 0.1):Play()
-    end)
-    
-    button.MouseButton1Up:Connect(function()
-        createTween(button, {Size = UDim2.new(button.Size.X.Scale / 0.95, 0, button.Size.Y.Scale / 0.95, 0)}, 0.1):Play()
-    end)
-end
+
 
 local function createUI()
     if ScreenGui then
@@ -92,7 +82,6 @@ local function createUI()
     local Overlay = Instance.new("Frame")
     Overlay.Name = "Overlay"
     Overlay.Size = UDim2.new(1, 0, 1, 0)
-    Overlay.BackgroundColor3 = Colors.Background
     Overlay.BackgroundTransparency = 1
     Overlay.Parent = ScreenGui
     
@@ -115,18 +104,7 @@ local function createUI()
     CardStroke.Transparency = 1
     CardStroke.Parent = Card
     
-    local CardGlow = Instance.new("ImageLabel")
-    CardGlow.Name = "Glow"
-    CardGlow.Size = UDim2.new(1, 100, 1, 100)
-    CardGlow.Position = UDim2.new(0.5, 0, 0.5, 0)
-    CardGlow.AnchorPoint = Vector2.new(0.5, 0.5)
-    CardGlow.BackgroundTransparency = 1
-    CardGlow.Image = "rbxassetid://5028857084"
-    CardGlow.ImageColor3 = Colors.PrimaryGlow
-    CardGlow.ImageTransparency = 1
-    CardGlow.ScaleType = Enum.ScaleType.Slice
-    CardGlow.SliceCenter = Rect.new(24, 24, 276, 276)
-    CardGlow.Parent = Card
+
     
     local Logo = Instance.new("TextLabel")
     Logo.Name = "Logo"
@@ -256,12 +234,8 @@ local function createUI()
     task.spawn(function()
         task.wait(0.1)
         
-        createTween(Overlay, {BackgroundTransparency = 0.3}, 0.5):Play()
-        task.wait(0.1)
-        
         createTween(Card, {BackgroundTransparency = 0}, 0.4):Play()
         createTween(CardStroke, {Transparency = 0}, 0.4):Play()
-        createTween(CardGlow, {ImageTransparency = 0.85}, 0.6):Play()
         task.wait(0.15)
         
         createTween(Logo, {TextTransparency = 0}, 0.3):Play()
@@ -309,13 +283,11 @@ local function createUI()
     
     local function onSuccess()
         createTween(Card, {BackgroundColor3 = Color3.fromRGB(20, 35, 25)}, 0.3):Play()
-        createTween(CardGlow, {ImageColor3 = Colors.Success}, 0.3):Play()
         showStatus("✓ Access Granted! Loading WindHub...", false)
         
         task.wait(1.5)
         
         createTween(Card, {Position = UDim2.new(0.5, 0, 0, -500)}, 0.5, Enum.EasingStyle.Back, Enum.EasingDirection.In):Play()
-        createTween(Overlay, {BackgroundTransparency = 1}, 0.5):Play()
         
         task.wait(0.5)
         ScreenGui:Destroy()

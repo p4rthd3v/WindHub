@@ -53,26 +53,19 @@ end
 
 function WindHub:Init()
     print("[WindHub] Initializing...")
-    print("[WindHub] Loading key system...")
     
     local success, KeyUI = pcall(function()
         return loadModule("ui/key_ui.lua")
     end)
     
-    print("[WindHub] KeyUI load success:", success, "KeyUI:", KeyUI)
-    
     if success and KeyUI then
-        print("[WindHub] Showing key UI...")
         local showSuccess = KeyUI:Show(function()
             loadMainHub()
         end)
-        print("[WindHub] Show result:", showSuccess)
         if not showSuccess then
-            warn("[WindHub] Key UI show failed, loading without verification...")
             loadMainHub()
         end
     else
-        warn("[WindHub] Failed to load key UI, loading without verification...")
         loadMainHub()
     end
     
