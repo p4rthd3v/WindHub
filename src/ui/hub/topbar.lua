@@ -72,9 +72,9 @@ function Topbar:Create(parent, mainFrame, theme, closeCallback, minimizeCallback
     minimizeBtn.Size = UDim2.new(0, 30, 0, 30)
     minimizeBtn.Position = UDim2.new(0, 0, 0, 0)
     minimizeBtn.BackgroundColor3 = Theme.Colors.Secondary
-    minimizeBtn.Text = "─"
+    minimizeBtn.Text = "-"
     minimizeBtn.TextColor3 = Theme.Colors.TextMuted
-    minimizeBtn.TextSize = 14
+    minimizeBtn.TextSize = 20
     minimizeBtn.Font = Theme.Fonts.Title
     minimizeBtn.AutoButtonColor = false
     minimizeBtn.Parent = buttonContainer
@@ -89,9 +89,9 @@ function Topbar:Create(parent, mainFrame, theme, closeCallback, minimizeCallback
     closeBtn.Position = UDim2.new(0, 40, 0, 0)
     closeBtn.BackgroundColor3 = Theme.Colors.Error
     closeBtn.BackgroundTransparency = 0.5
-    closeBtn.Text = "✕"
+    closeBtn.Text = "X"
     closeBtn.TextColor3 = Theme.Colors.Text
-    closeBtn.TextSize = 12
+    closeBtn.TextSize = 14
     closeBtn.Font = Theme.Fonts.Title
     closeBtn.AutoButtonColor = false
     closeBtn.Parent = buttonContainer
