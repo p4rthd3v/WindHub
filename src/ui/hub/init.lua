@@ -240,6 +240,7 @@ end
 function Hub:Create()
     Theme = loadModule("ui/components/theme.lua")
     Toast = loadModule("ui/components/toast.lua")
+    local GameDetector = loadModule("core/game_detector.lua")
     Sidebar = loadModule("ui/hub/sidebar.lua")
     Topbar = loadModule("ui/hub/topbar.lua")
     HomeTab = loadModule("ui/hub/tabs/home.lua")
@@ -249,6 +250,10 @@ function Hub:Create()
     if not Theme then
         warn("[WindHub] Failed to load theme")
         return false
+    end
+    
+    if GameDetector then
+        GameDetector:Init()
     end
     
     ScreenGui = Instance.new("ScreenGui")
@@ -302,7 +307,7 @@ function Hub:Create()
     end
     
     if FeaturesTab then
-        FeaturesTab:Create(ContentFrame, Theme)
+        FeaturesTab:Create(ContentFrame, Theme, GameDetector)
     end
     
     if SettingsTab then
@@ -316,7 +321,12 @@ function Hub:Create()
         
         task.wait(0.5)
         local player = Players.LocalPlayer
-        Toast:Success("Welcome back, " .. player.DisplayName .. "!", 4)
+        
+        if GameDetector and GameDetector:IsSupported() then
+            Toast:Success("Welcome to " .. GameDetector:GetGameName() .. "!", 4)
+        else
+            Toast:Warning("This game is not supported", 4)
+        end
     end
     
     return true
