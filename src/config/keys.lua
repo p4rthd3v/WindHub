@@ -10,6 +10,10 @@ return {
         "WIND-BETA-2026-TEST",
     },
     
+    DeveloperKeys = {
+        "WIND-DEV-ACCESS-2026",
+    },
+    
     KeyPrefix = "WIND",
     
     Settings = {

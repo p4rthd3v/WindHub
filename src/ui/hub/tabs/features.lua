@@ -498,7 +498,16 @@ function FeaturesTab:Create(parent, theme, gameDetector)
         unsupportedLabel.Name = "Unsupported"
         unsupportedLabel.Size = UDim2.new(1, 0, 0, 100)
         unsupportedLabel.BackgroundTransparency = 1
-        unsupportedLabel.Text = "⚠️ This game is not supported.\nNo features available."
+        
+        local msg = "⚠️ This game is not supported.\nNo features available."
+        if gameDetector then
+            local gameInfo = gameDetector:GetCurrentGame()
+            if gameInfo and gameInfo.Message then
+                msg = "⚠️ " .. gameInfo.Message
+            end
+        end
+        
+        unsupportedLabel.Text = msg
         unsupportedLabel.TextColor3 = Theme.Colors.TextMuted
         unsupportedLabel.TextSize = 14
         unsupportedLabel.Font = Theme.Fonts.Body

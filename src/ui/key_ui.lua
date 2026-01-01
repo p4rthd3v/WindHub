@@ -281,9 +281,10 @@ local function createUI()
         createTween(StatusLabel, {TextTransparency = 1}, 0.2):Play()
     end
     
-    local function onSuccess()
-        createTween(Card, {BackgroundColor3 = Color3.fromRGB(20, 35, 25)}, 0.3):Play()
-        showStatus("✓ Access Granted! Loading WindHub...", false)
+    local function onSuccess(isDev)
+        VerifyButton.Text = "SUCCESS!"
+        createTween(VerifyButton, {BackgroundColor3 = Colors.Success}, 0.2):Play()
+        showStatus("Access Granted" .. (isDev and " (Developer)" or ""), false)
         
         task.wait(1.5)
         
@@ -291,10 +292,9 @@ local function createUI()
         
         task.wait(0.5)
         ScreenGui:Destroy()
-        IsVerified = true
         
         if OnSuccess then
-            OnSuccess()
+            OnSuccess(isDev)
         end
     end
     
@@ -310,10 +310,10 @@ local function createUI()
         VerifyButton.Text = "VERIFYING..."
         
         task.spawn(function()
-            local success, message = Auth:ValidateKey(key)
+            local success, message, isDev = Auth:ValidateKey(key)
             
             if success then
-                onSuccess()
+                onSuccess(isDev)
             else
                 VerifyButton.Text = "VERIFY KEY"
                 showStatus(message, true)

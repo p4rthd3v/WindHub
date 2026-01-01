@@ -34,13 +34,13 @@ local function loadModule(path)
     return nil
 end
 
-local function loadMainHub()
-    print("[WindHub] Loading hub...")
+local function loadMainHub(isDev)
+    print("[WindHub] Loading hub..." .. (isDev and " (DEV MODE)" or ""))
     
     local Hub = loadModule("ui/hub/init.lua")
     
     if Hub then
-        local success = Hub:Create()
+        local success = Hub:Create(isDev)
         if success then
             print("[WindHub] Hub loaded successfully!")
         else
@@ -59,14 +59,12 @@ function WindHub:Init()
     end)
     
     if success and KeyUI then
-        local showSuccess = KeyUI:Show(function()
-            loadMainHub()
+        -- Updated to accept isDev argument
+        KeyUI:Show(function(isDev)
+            loadMainHub(isDev)
         end)
-        if not showSuccess then
-            loadMainHub()
-        end
     else
-        loadMainHub()
+        loadMainHub(false)
     end
     
     return self

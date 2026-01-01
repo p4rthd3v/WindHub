@@ -31,7 +31,11 @@ local function loadConfig()
     return false
 end
 
-function GameDetector:Init()
+local IsDev = false
+
+function GameDetector:Init(isUserDev)
+    IsDev = isUserDev or false
+    
     if not loadConfig() then
         warn("[WindHub] Failed to load games config")
         return false
@@ -42,7 +46,14 @@ function GameDetector:Init()
     if GamesConfig.Games[placeId] then
         CurrentGame = GamesConfig.Games[placeId]
         CurrentGame.PlaceId = placeId
-        CurrentGame.Supported = true
+        
+        -- Check if game is in Development and if user is Dev
+        if CurrentGame.Status == "Development" and not IsDev then
+            CurrentGame.Supported = false
+            CurrentGame.Message = "This game is currently in Development. Developer access required."
+        else
+            CurrentGame.Supported = true
+        end
     else
         CurrentGame = {
             Name = game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name or "Unknown Game",

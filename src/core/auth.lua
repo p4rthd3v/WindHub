@@ -77,12 +77,25 @@ function Auth:ValidateKey(inputKey)
     
     local inputClean = string.upper(string.gsub(inputKey, "%s+", ""))
     
+    -- Check Developer Keys
+    if KeyConfig.DeveloperKeys then
+        for _, devKey in ipairs(KeyConfig.DeveloperKeys) do
+            local validClean = string.upper(string.gsub(devKey, "%s+", ""))
+            
+            if hashKey(inputClean) == hashKey(validClean) and inputClean == validClean then
+                Attempts = 0
+                return true, "Developer Access Granted", true
+            end
+        end
+    end
+
+    -- Check Validation Keys
     for _, validKey in ipairs(KeyConfig.ValidKeys) do
         local validClean = string.upper(string.gsub(validKey, "%s+", ""))
         
         if hashKey(inputClean) == hashKey(validClean) and inputClean == validClean then
             Attempts = 0
-            return true, "Key validated successfully"
+            return true, "Key validated successfully", false
         end
     end
     

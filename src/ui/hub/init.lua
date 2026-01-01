@@ -241,7 +241,7 @@ local function createMiniBar(parent)
     return MiniBar
 end
 
-function Hub:Create()
+function Hub:Create(isDev)
     Theme = loadModule("ui/components/theme.lua")
     Toast = loadModule("ui/components/toast.lua")
     local GameDetector = loadModule("core/game_detector.lua")
@@ -257,7 +257,7 @@ function Hub:Create()
     end
     
     if GameDetector then
-        GameDetector:Init()
+        GameDetector:Init(isDev)
     end
     
     ScreenGui = Instance.new("ScreenGui")
