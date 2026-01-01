@@ -74,6 +74,10 @@ local function switchTab(tabName)
 end
 
 local function closeHub()
+    if FeaturesTab and FeaturesTab.Cleanup then
+        FeaturesTab:Cleanup()
+    end
+
     if MainFrame then
         createTween(MainFrame, {
             Size = UDim2.new(0, 0, 0, 0),

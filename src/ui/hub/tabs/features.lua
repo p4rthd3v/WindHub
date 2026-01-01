@@ -560,4 +560,15 @@ function FeaturesTab:GetContainer()
     return Container
 end
 
+function FeaturesTab:Cleanup()
+    for _, module in pairs(LoadedModules) do
+        if module.Disable then
+            module:Disable()
+        elseif module.Toggle then
+            module:Toggle(false)
+        end
+    end
+    LoadedModules = {}
+end
+
 return FeaturesTab
