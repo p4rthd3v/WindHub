@@ -14,6 +14,17 @@ local Container = nil
 
 local UPDATES = {
     {
+        version = "v1.1.0",
+        date = "Jan 1, 2026",
+        changes = {
+            "👁️ Added Player ESP feature",
+            "🚀 Added Teleport to Player feature",
+            "🎮 Game detection system",
+            "⚡ Dynamic feature loading",
+            "🔧 Improved minimize animations",
+        }
+    },
+    {
         version = "v1.0.0",
         date = "Jan 1, 2026",
         changes = {

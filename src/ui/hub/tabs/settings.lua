@@ -118,7 +118,7 @@ function SettingsTab:Create(parent, theme)
     footer.Name = "Footer"
     footer.Size = UDim2.new(1, 0, 0, 40)
     footer.BackgroundTransparency = 1
-    footer.Text = "WindHub v1.0 • Made with ❤️"
+    footer.Text = "WindHub v1.1 • Made with ❤️"
     footer.TextColor3 = Theme.Colors.TextDark
     footer.TextSize = 11
     footer.Font = Theme.Fonts.Body
