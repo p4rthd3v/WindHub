@@ -1,0 +1,27 @@
+# 🌀 WindHub
+
+A powerful script hub for enhanced gameplay.
+
+## 📦 Usage
+
+Execute the following loadstring in your executor:
+
+```lua
+loadstring(game:HttpGet("https://raw.githubusercontent.com/YOUR_USERNAME/WindHub/main/src/loader.lua"))()
+```
+
+> **Note:** Replace `YOUR_USERNAME` with your actual GitHub username after pushing to GitHub.
+
+## 📁 Structure
+
+- `src/loader.lua` - Main entry point that loads all modules
+- `src/modules/` - Individual feature modules
+- `src/ui/` - User interface components
+
+## 🚀 Features
+
+*Coming soon...*
+
+---
+
+**WindHub** - Made with ❤️
