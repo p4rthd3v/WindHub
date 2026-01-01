@@ -34,8 +34,8 @@ local function loadModule(path)
     return nil
 end
 
-function WindHub:Init()
-    print("[WindHub] Initializing...")
+local function loadMainHub()
+    print("[WindHub] Loading modules...")
     
     local modules = {
         "modules/example.lua",
@@ -49,6 +49,22 @@ function WindHub:Init()
     end
     
     print("[WindHub] Loaded successfully!")
+end
+
+function WindHub:Init()
+    print("[WindHub] Initializing...")
+    
+    local KeyUI = loadModule("ui/key_ui.lua")
+    
+    if KeyUI then
+        KeyUI:Show(function()
+            loadMainHub()
+        end)
+    else
+        warn("[WindHub] Failed to load key UI, loading without verification...")
+        loadMainHub()
+    end
+    
     return self
 end
 
