@@ -35,20 +35,20 @@ local function loadModule(path)
 end
 
 local function loadMainHub()
-    print("[WindHub] Loading modules...")
+    print("[WindHub] Loading hub...")
     
-    local modules = {
-        "modules/example.lua",
-    }
+    local Hub = loadModule("ui/hub/init.lua")
     
-    for _, modulePath in ipairs(modules) do
-        local module = loadModule(modulePath)
-        if module and type(module.Init) == "function" then
-            module:Init()
+    if Hub then
+        local success = Hub:Create()
+        if success then
+            print("[WindHub] Hub loaded successfully!")
+        else
+            warn("[WindHub] Failed to create hub")
         end
+    else
+        warn("[WindHub] Failed to load hub module")
     end
-    
-    print("[WindHub] Loaded successfully!")
 end
 
 function WindHub:Init()

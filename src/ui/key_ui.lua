@@ -298,7 +298,7 @@ local function createUI()
         end
     end
     
-    VerifyButton.MouseButton1Click:Connect(function()
+    local function verifyKey()
         hideStatus()
         
         local key = KeyInput.Text
@@ -323,7 +323,9 @@ local function createUI()
                 createTween(InputStroke, {Color = Colors.InputBorder}, 0.2):Play()
             end
         end)
-    end)
+    end
+    
+    VerifyButton.MouseButton1Click:Connect(verifyKey)
     
     GetKeyButton.MouseButton1Click:Connect(function()
         if Auth then
@@ -337,7 +339,7 @@ local function createUI()
     
     KeyInput.FocusLost:Connect(function(enterPressed)
         if enterPressed then
-            VerifyButton.MouseButton1Click:Fire()
+            verifyKey()
         end
     end)
     
