@@ -248,7 +248,7 @@ function Hub:Create(isDev)
     Sidebar = loadModule("ui/hub/sidebar.lua")
     Topbar = loadModule("ui/hub/topbar.lua")
     HomeTab = loadModule("ui/hub/tabs/home.lua")
-    FeaturesTab = loadModule("ui/hub/tabs/features.lua")
+    FeaturesTab = loadModule("ui/hub/tabs/features/init.lua")
     SettingsTab = loadModule("ui/hub/tabs/settings.lua")
     
     if not Theme then
@@ -290,6 +290,37 @@ function Hub:Create(isDev)
     ContentFrame.BackgroundTransparency = 1
     ContentFrame.Parent = MainFrame
     
+    local UserInputService = game:GetService("UserInputService")
+    local dragConnection = nil
+    local dragStart = nil
+    local startPos = nil
+    
+    MainFrame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragStart = input.Position
+            startPos = MainFrame.Position
+            
+            dragConnection = UserInputService.InputChanged:Connect(function(moveInput)
+                if moveInput.UserInputType == Enum.UserInputType.MouseMovement then
+                    local delta = moveInput.Position - dragStart
+                    MainFrame.Position = UDim2.new(
+                        startPos.X.Scale, startPos.X.Offset + delta.X,
+                        startPos.Y.Scale, startPos.Y.Offset + delta.Y
+                    )
+                end
+            end)
+        end
+    end)
+    
+    MainFrame.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            if dragConnection then
+                dragConnection:Disconnect()
+                dragConnection = nil
+            end
+        end
+    end)
+    
     createMiniBar(MainFrame)
     
     createTween(MainFrame, {Size = UDim2.new(0, 700, 0, 450)}, 0.4, Enum.EasingStyle.Back):Play()
@@ -307,7 +338,7 @@ function Hub:Create(isDev)
     end
     
     if HomeTab then
-        HomeTab:Create(ContentFrame, Theme)
+        HomeTab:Create(ContentFrame, Theme, GameDetector)
     end
     
     if FeaturesTab then

@@ -12,6 +12,12 @@ return {
             FeaturesPath = "features/baseplate/init.lua",
             Status = "Development",
         },
+        ["292439477"] = {
+            Name = "Phantom Forces",
+            Icon = "🔫",
+            FeaturesPath = "features/phantomforces/init.lua",
+            Status = "Development",
+        },
     },
     
     UnsupportedMessage = "This game is not currently supported by WindHub.",
