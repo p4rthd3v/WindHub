@@ -22,9 +22,16 @@ return {
         },
         {
             Name = "Player ESP",
-            Description = "See all players through walls",
+            Description = "See players through walls with distance",
             Category = "Visual",
             Module = "features/baseplate/esp.lua",
+            Type = "toggle",
+        },
+        {
+            Name = "Player Tracers",
+            Description = "Draw lines to all players",
+            Category = "Visual",
+            Module = "features/baseplate/tracers.lua",
             Type = "toggle",
         },
         {
