@@ -7,10 +7,8 @@ A powerful script hub for enhanced gameplay.
 Execute the following loadstring in your executor:
 
 ```lua
-loadstring(game:HttpGet("https://raw.githubusercontent.com/YOUR_USERNAME/WindHub/main/src/loader.lua"))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/flipgag746-sudo/WindHub/main/src/loader.lua"))()
 ```
-
-> **Note:** Replace `YOUR_USERNAME` with your actual GitHub username after pushing to GitHub.
 
 ## 📁 Structure
 
