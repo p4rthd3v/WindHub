@@ -22,6 +22,7 @@ local SettingsTab = nil
 local ScreenGui = nil
 local MainFrame = nil
 local ContentFrame = nil
+local MiniBar = nil
 local IsMinimized = false
 
 local function fetch(path)
@@ -93,17 +94,95 @@ local function minimizeHub()
     IsMinimized = not IsMinimized
     
     if IsMinimized then
-        if ContentFrame then
-            ContentFrame.Visible = false
-        end
-        createTween(MainFrame, {Size = UDim2.new(0, 200, 0, 50)}, 0.3):Play()
+        ContentFrame.Visible = false
+        MiniBar.Visible = true
+        createTween(MainFrame, {Size = UDim2.new(0, 200, 0, 45)}, 0.3):Play()
     else
         createTween(MainFrame, {Size = UDim2.new(0, 700, 0, 450)}, 0.3):Play()
         task.wait(0.3)
-        if ContentFrame then
-            ContentFrame.Visible = true
-        end
+        MiniBar.Visible = false
+        ContentFrame.Visible = true
     end
+end
+
+local function createMiniBar(parent)
+    MiniBar = Instance.new("Frame")
+    MiniBar.Name = "MiniBar"
+    MiniBar.Size = UDim2.new(1, 0, 1, 0)
+    MiniBar.BackgroundTransparency = 1
+    MiniBar.Visible = false
+    MiniBar.Parent = parent
+    
+    local logo = Instance.new("TextLabel")
+    logo.Name = "Logo"
+    logo.Size = UDim2.new(1, -90, 1, 0)
+    logo.Position = UDim2.new(0, 12, 0, 0)
+    logo.BackgroundTransparency = 1
+    logo.Text = "🌀 WINDHUB"
+    logo.TextColor3 = Theme.Colors.Text
+    logo.TextSize = 14
+    logo.Font = Theme.Fonts.Title
+    logo.TextXAlignment = Enum.TextXAlignment.Left
+    logo.Parent = MiniBar
+    
+    local buttonContainer = Instance.new("Frame")
+    buttonContainer.Name = "Buttons"
+    buttonContainer.Size = UDim2.new(0, 70, 0, 28)
+    buttonContainer.Position = UDim2.new(1, -80, 0.5, 0)
+    buttonContainer.AnchorPoint = Vector2.new(0, 0.5)
+    buttonContainer.BackgroundTransparency = 1
+    buttonContainer.Parent = MiniBar
+    
+    local expandBtn = Instance.new("TextButton")
+    expandBtn.Name = "Expand"
+    expandBtn.Size = UDim2.new(0, 28, 0, 28)
+    expandBtn.Position = UDim2.new(0, 0, 0, 0)
+    expandBtn.BackgroundColor3 = Theme.Colors.Primary
+    expandBtn.Text = "+"
+    expandBtn.TextColor3 = Theme.Colors.Text
+    expandBtn.TextSize = 18
+    expandBtn.Font = Theme.Fonts.Title
+    expandBtn.AutoButtonColor = false
+    expandBtn.Parent = buttonContainer
+    
+    local expandCorner = Instance.new("UICorner")
+    expandCorner.CornerRadius = Theme.Sizes.CornerRadius
+    expandCorner.Parent = expandBtn
+    
+    local closeBtn = Instance.new("TextButton")
+    closeBtn.Name = "Close"
+    closeBtn.Size = UDim2.new(0, 28, 0, 28)
+    closeBtn.Position = UDim2.new(0, 35, 0, 0)
+    closeBtn.BackgroundColor3 = Theme.Colors.Error
+    closeBtn.BackgroundTransparency = 0.5
+    closeBtn.Text = "X"
+    closeBtn.TextColor3 = Theme.Colors.Text
+    closeBtn.TextSize = 12
+    closeBtn.Font = Theme.Fonts.Title
+    closeBtn.AutoButtonColor = false
+    closeBtn.Parent = buttonContainer
+    
+    local closeCorner = Instance.new("UICorner")
+    closeCorner.CornerRadius = Theme.Sizes.CornerRadius
+    closeCorner.Parent = closeBtn
+    
+    expandBtn.MouseEnter:Connect(function()
+        createTween(expandBtn, {BackgroundColor3 = Theme.Colors.PrimaryHover}, 0.15):Play()
+    end)
+    expandBtn.MouseLeave:Connect(function()
+        createTween(expandBtn, {BackgroundColor3 = Theme.Colors.Primary}, 0.15):Play()
+    end)
+    expandBtn.MouseButton1Click:Connect(minimizeHub)
+    
+    closeBtn.MouseEnter:Connect(function()
+        createTween(closeBtn, {BackgroundTransparency = 0}, 0.15):Play()
+    end)
+    closeBtn.MouseLeave:Connect(function()
+        createTween(closeBtn, {BackgroundTransparency = 0.5}, 0.15):Play()
+    end)
+    closeBtn.MouseButton1Click:Connect(closeHub)
+    
+    return MiniBar
 end
 
 function Hub:Create()
@@ -149,6 +228,8 @@ function Hub:Create()
     ContentFrame.Size = UDim2.new(1, 0, 1, 0)
     ContentFrame.BackgroundTransparency = 1
     ContentFrame.Parent = MainFrame
+    
+    createMiniBar(MainFrame)
     
     createTween(MainFrame, {Size = UDim2.new(0, 700, 0, 450)}, 0.4, Enum.EasingStyle.Back):Play()
     
