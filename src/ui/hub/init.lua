@@ -94,18 +94,35 @@ local function minimizeHub()
     IsMinimized = not IsMinimized
     
     if IsMinimized then
+        createTween(ContentFrame, {BackgroundTransparency = 1}, 0.15):Play()
+        for _, child in ipairs(ContentFrame:GetChildren()) do
+            if child:IsA("GuiObject") then
+                createTween(child, {BackgroundTransparency = 1}, 0.15):Play()
+            end
+        end
+        task.wait(0.1)
         ContentFrame.Visible = false
         MiniBar.Visible = true
-        createTween(MainFrame, {Size = UDim2.new(0, 200, 0, 45)}, 0.3):Play()
+        createTween(MainFrame, {Size = UDim2.new(0, 220, 0, 45)}, 0.25, Enum.EasingStyle.Quint):Play()
     else
-        createTween(MainFrame, {Size = UDim2.new(0, 700, 0, 450)}, 0.3):Play()
-        task.wait(0.3)
+        createTween(MainFrame, {Size = UDim2.new(0, 700, 0, 450)}, 0.35, Enum.EasingStyle.Quint):Play()
+        task.wait(0.25)
         MiniBar.Visible = false
         ContentFrame.Visible = true
+        for _, child in ipairs(ContentFrame:GetChildren()) do
+            if child:IsA("GuiObject") then
+                createTween(child, {BackgroundTransparency = 0}, 0.2):Play()
+            end
+        end
     end
 end
 
 local function createMiniBar(parent)
+    local UserInputService = game:GetService("UserInputService")
+    local dragConnection = nil
+    local dragStart = nil
+    local startPos = nil
+    
     MiniBar = Instance.new("Frame")
     MiniBar.Name = "MiniBar"
     MiniBar.Size = UDim2.new(1, 0, 1, 0)
@@ -113,9 +130,18 @@ local function createMiniBar(parent)
     MiniBar.Visible = false
     MiniBar.Parent = parent
     
+    local dragArea = Instance.new("TextButton")
+    dragArea.Name = "DragArea"
+    dragArea.Size = UDim2.new(1, -85, 1, 0)
+    dragArea.Position = UDim2.new(0, 0, 0, 0)
+    dragArea.BackgroundTransparency = 1
+    dragArea.Text = ""
+    dragArea.AutoButtonColor = false
+    dragArea.Parent = MiniBar
+    
     local logo = Instance.new("TextLabel")
     logo.Name = "Logo"
-    logo.Size = UDim2.new(1, -90, 1, 0)
+    logo.Size = UDim2.new(1, 0, 1, 0)
     logo.Position = UDim2.new(0, 12, 0, 0)
     logo.BackgroundTransparency = 1
     logo.Text = "🌀 WINDHUB"
@@ -123,7 +149,7 @@ local function createMiniBar(parent)
     logo.TextSize = 14
     logo.Font = Theme.Fonts.Title
     logo.TextXAlignment = Enum.TextXAlignment.Left
-    logo.Parent = MiniBar
+    logo.Parent = dragArea
     
     local buttonContainer = Instance.new("Frame")
     buttonContainer.Name = "Buttons"
@@ -165,6 +191,32 @@ local function createMiniBar(parent)
     local closeCorner = Instance.new("UICorner")
     closeCorner.CornerRadius = Theme.Sizes.CornerRadius
     closeCorner.Parent = closeBtn
+    
+    dragArea.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragStart = input.Position
+            startPos = MainFrame.Position
+            
+            dragConnection = UserInputService.InputChanged:Connect(function(moveInput)
+                if moveInput.UserInputType == Enum.UserInputType.MouseMovement then
+                    local delta = moveInput.Position - dragStart
+                    MainFrame.Position = UDim2.new(
+                        startPos.X.Scale, startPos.X.Offset + delta.X,
+                        startPos.Y.Scale, startPos.Y.Offset + delta.Y
+                    )
+                end
+            end)
+        end
+    end)
+    
+    dragArea.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            if dragConnection then
+                dragConnection:Disconnect()
+                dragConnection = nil
+            end
+        end
+    end)
     
     expandBtn.MouseEnter:Connect(function()
         createTween(expandBtn, {BackgroundColor3 = Theme.Colors.PrimaryHover}, 0.15):Play()
