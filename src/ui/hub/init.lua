@@ -94,10 +94,9 @@ local function minimizeHub()
     IsMinimized = not IsMinimized
     
     if IsMinimized then
-        createTween(ContentFrame, {BackgroundTransparency = 1}, 0.15):Play()
         for _, child in ipairs(ContentFrame:GetChildren()) do
             if child:IsA("GuiObject") then
-                createTween(child, {BackgroundTransparency = 1}, 0.15):Play()
+                createTween(child, {BackgroundTransparency = 1}, 0.12):Play()
             end
         end
         task.wait(0.1)
@@ -105,15 +104,16 @@ local function minimizeHub()
         MiniBar.Visible = true
         createTween(MainFrame, {Size = UDim2.new(0, 220, 0, 45)}, 0.25, Enum.EasingStyle.Quint):Play()
     else
-        createTween(MainFrame, {Size = UDim2.new(0, 700, 0, 450)}, 0.35, Enum.EasingStyle.Quint):Play()
-        task.wait(0.25)
         MiniBar.Visible = false
         ContentFrame.Visible = true
+        
         for _, child in ipairs(ContentFrame:GetChildren()) do
             if child:IsA("GuiObject") then
-                createTween(child, {BackgroundTransparency = 0}, 0.2):Play()
+                child.BackgroundTransparency = 0
             end
         end
+        
+        createTween(MainFrame, {Size = UDim2.new(0, 700, 0, 450)}, 0.35, Enum.EasingStyle.Quint):Play()
     end
 end
 
