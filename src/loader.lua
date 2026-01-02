@@ -6,7 +6,7 @@
 local WindHub = {}
 WindHub.__index = WindHub
 
-local GITHUB_RAW = "https://raw.githubusercontent.com/flipgag746-sudo/WindHub/main/src/"
+local GITHUB_RAW = "https://raw.githubusercontent.com/p4rthd3v/WindHub/main/src/"
 
 local function fetch(path)
     local success, result = pcall(function()

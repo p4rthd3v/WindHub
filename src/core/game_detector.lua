@@ -6,7 +6,7 @@
 local GameDetector = {}
 GameDetector.__index = GameDetector
 
-local GITHUB_RAW = "https://raw.githubusercontent.com/flipgag746-sudo/WindHub/main/src/"
+local GITHUB_RAW = "https://raw.githubusercontent.com/p4rthd3v/WindHub/main/src/"
 
 local GamesConfig = nil
 local CurrentGame = nil
