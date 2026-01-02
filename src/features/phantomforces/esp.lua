@@ -1,7 +1,7 @@
 --[[
-    WindHub Phantom Forces ESP Feature
-    Uses Scanner module for robust character detection
-    Debug mode enabled for troubleshooting
+    WindHub Phantom Forces ESP V3
+    Works with obfuscated character names
+    Highlights all enemy characters found in game
 ]]
 
 local ESP = {}
@@ -33,19 +33,14 @@ end
 local Scanner = nil
 local LocalPlayer = Players.LocalPlayer
 local IsEnabled = false
-local TeamCheckEnabled = false
 local Highlights = {}
 local DistanceLabels = {}
 local UpdateConnection = nil
-local CharacterConnections = {}
-local PlayerAddedConnection = nil
-local PlayerRemovingConnection = nil
 local ScanConnection = nil
 
 local DEBUG = true
 
-local ESP_COLOR_ENEMY = Color3.fromRGB(255, 75, 75)
-local ESP_COLOR_ALLY = Color3.fromRGB(75, 175, 255)
+local ESP_COLOR = Color3.fromRGB(255, 75, 75)
 local FILL_TRANSPARENCY = 0.7
 local OUTLINE_TRANSPARENCY = 0
 
@@ -58,7 +53,7 @@ end
 local function getDistance(position)
     if not Scanner then return 0 end
     
-    local myChar = Scanner.GetCharacter(LocalPlayer)
+    local myChar = Scanner.GetMyCharacter()
     if not myChar then return 0 end
     
     local myRoot = Scanner.GetRootPart(myChar)
@@ -67,33 +62,37 @@ local function getDistance(position)
     return math.floor((myRoot.Position - position).Magnitude)
 end
 
-local function createDistanceLabel(character, espColor)
+local function createDistanceLabel(character)
     if not Scanner then return nil end
     if not character then return nil end
     
     local head = Scanner.GetHead(character)
     if not head then
-        debugPrint("No head found for distance label")
-        return nil
+        local root = Scanner.GetRootPart(character)
+        if root then
+            head = root
+        else
+            return nil
+        end
     end
     
-    local existing = head:FindFirstChild("WindHubDistance")
+    local existing = character:FindFirstChild("WindHubDistance")
     if existing then existing:Destroy() end
     
     local billboard = Instance.new("BillboardGui")
     billboard.Name = "WindHubDistance"
     billboard.Size = UDim2.new(0, 100, 0, 30)
-    billboard.StudsOffset = Vector3.new(0, 2.5, 0)
+    billboard.StudsOffset = Vector3.new(0, 3, 0)
     billboard.AlwaysOnTop = true
     billboard.Adornee = head
-    billboard.Parent = head
+    billboard.Parent = character
     
     local label = Instance.new("TextLabel")
     label.Name = "Distance"
     label.Size = UDim2.new(1, 0, 1, 0)
     label.BackgroundTransparency = 1
     label.Text = "0m"
-    label.TextColor3 = espColor
+    label.TextColor3 = ESP_COLOR
     label.TextStrokeColor3 = Color3.new(0, 0, 0)
     label.TextStrokeTransparency = 0.3
     label.TextSize = 14
@@ -103,58 +102,41 @@ local function createDistanceLabel(character, espColor)
     return billboard
 end
 
-local function removeHighlight(player)
-    if Highlights[player] then
+local function removeHighlight(character)
+    if Highlights[character] then
         pcall(function()
-            Highlights[player]:Destroy()
+            Highlights[character]:Destroy()
         end)
-        Highlights[player] = nil
+        Highlights[character] = nil
     end
-    if DistanceLabels[player] then
+    if DistanceLabels[character] then
         pcall(function()
-            DistanceLabels[player]:Destroy()
+            DistanceLabels[character]:Destroy()
         end)
-        DistanceLabels[player] = nil
-    end
-    if CharacterConnections[player] then
-        pcall(function()
-            CharacterConnections[player]:Disconnect()
-        end)
-        CharacterConnections[player] = nil
+        DistanceLabels[character] = nil
     end
 end
 
-local function createHighlight(player)
-    if player == LocalPlayer then return end
-    if not Scanner then 
-        debugPrint("Scanner not loaded!")
-        return 
-    end
+local function createHighlight(character)
+    if not character then return end
+    if not Scanner then return end
     
-    local character = Scanner.GetCharacter(player)
-    if not character then
-        debugPrint("No character for:", player.Name)
+    if Scanner.IsMyCharacter(character) then
+        debugPrint("Skipping my own character")
         return
     end
     
-    debugPrint("Creating highlight for:", player.Name)
-    
-    local isEnemy = Scanner.IsEnemy(player)
-    
-    if TeamCheckEnabled and not isEnemy then
-        debugPrint("Skipping ally:", player.Name)
-        removeHighlight(player)
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if not humanoid or humanoid.Health <= 0 then
+        debugPrint("Skipping dead/no humanoid:", character.Name)
         return
     end
     
-    if Highlights[player] then
-        pcall(function() Highlights[player]:Destroy() end)
-    end
-    if DistanceLabels[player] then
-        pcall(function() DistanceLabels[player]:Destroy() end)
+    if Highlights[character] then
+        return
     end
     
-    local espColor = isEnemy and ESP_COLOR_ENEMY or ESP_COLOR_ALLY
+    debugPrint("Creating highlight for:", character.Name)
     
     local existing = character:FindFirstChild("WindHubESP")
     if existing then existing:Destroy() end
@@ -162,104 +144,67 @@ local function createHighlight(player)
     local highlight = Instance.new("Highlight")
     highlight.Name = "WindHubESP"
     highlight.Adornee = character
-    highlight.FillColor = espColor
-    highlight.OutlineColor = espColor
+    highlight.FillColor = ESP_COLOR
+    highlight.OutlineColor = ESP_COLOR
     highlight.FillTransparency = FILL_TRANSPARENCY
     highlight.OutlineTransparency = OUTLINE_TRANSPARENCY
     highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
     highlight.Parent = character
     
-    Highlights[player] = highlight
-    debugPrint("Highlight created for:", player.Name)
+    Highlights[character] = highlight
     
-    local distanceGui = createDistanceLabel(character, espColor)
+    local distanceGui = createDistanceLabel(character)
     if distanceGui then
-        DistanceLabels[player] = distanceGui
-        debugPrint("Distance label created for:", player.Name)
+        DistanceLabels[character] = distanceGui
     end
+    
+    debugPrint("Highlight created for:", character.Name)
 end
 
-local function setupPlayerConnections(player)
-    if player == LocalPlayer then return end
+local function updateHighlights()
+    if not Scanner then return end
+    if not IsEnabled then return end
     
-    if CharacterConnections[player] then
-        pcall(function() CharacterConnections[player]:Disconnect() end)
-    end
+    local enemies = Scanner.GetAllEnemyCharacters()
     
-    CharacterConnections[player] = player.CharacterAdded:Connect(function()
-        debugPrint("CharacterAdded for:", player.Name)
-        if IsEnabled then
-            task.wait(1.5)
-            createHighlight(player)
+    for _, character in ipairs(enemies) do
+        if not Highlights[character] then
+            createHighlight(character)
         end
-    end)
-    
-    if IsEnabled then
-        task.spawn(function()
-            task.wait(0.5)
-            createHighlight(player)
-        end)
-    end
-end
-
-local function refreshAllHighlights()
-    debugPrint("Refreshing all highlights...")
-    
-    local playersToRemove = {}
-    for player, _ in pairs(Highlights) do
-        table.insert(playersToRemove, player)
     end
     
-    for _, player in ipairs(playersToRemove) do
-        removeHighlight(player)
-    end
-    
-    if IsEnabled then
-        for _, player in ipairs(Players:GetPlayers()) do
-            if player ~= LocalPlayer then
-                task.spawn(function()
-                    createHighlight(player)
-                end)
+    local toRemove = {}
+    for character, highlight in pairs(Highlights) do
+        local stillExists = false
+        for _, enemy in ipairs(enemies) do
+            if enemy == character then
+                stillExists = true
+                break
             end
         end
+        
+        if not stillExists then
+            table.insert(toRemove, character)
+        end
+    end
+    
+    for _, character in ipairs(toRemove) do
+        removeHighlight(character)
     end
 end
 
 local function updateDistances()
     if not Scanner then return end
     
-    for player, gui in pairs(DistanceLabels) do
+    for character, gui in pairs(DistanceLabels) do
         if gui and gui.Parent then
-            local character = Scanner.GetCharacter(player)
-            if character then
-                local root = Scanner.GetRootPart(character)
-                if root then
-                    local distance = getDistance(root.Position)
-                    local label = gui:FindFirstChild("Distance")
-                    if label then
-                        label.Text = distance .. "m"
-                    end
+            local root = Scanner.GetRootPart(character)
+            if root then
+                local distance = getDistance(root.Position)
+                local label = gui:FindFirstChild("Distance")
+                if label then
+                    label.Text = distance .. "m"
                 end
-            end
-        end
-    end
-end
-
-local function periodicScan()
-    if not IsEnabled then return end
-    if not Scanner then return end
-    
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer then
-            local hasHighlight = Highlights[player] ~= nil
-            local character = Scanner.GetCharacter(player)
-            
-            if character and not hasHighlight then
-                debugPrint("Periodic scan found new character:", player.Name)
-                createHighlight(player)
-            elseif not character and hasHighlight then
-                debugPrint("Periodic scan removing dead/missing:", player.Name)
-                removeHighlight(player)
             end
         end
     end
@@ -267,35 +212,20 @@ end
 
 function ESP:Enable()
     if IsEnabled then return end
-    debugPrint("Enabling ESP...")
+    debugPrint("Enabling ESP V3...")
     
     IsEnabled = true
     
     Scanner = loadModule("features/phantomforces/scanner.lua")
     if Scanner then
-        debugPrint("Scanner loaded, running init...")
+        debugPrint("Scanner loaded!")
         Scanner.Init()
     else
         debugPrint("ERROR: Failed to load scanner!")
         return
     end
     
-    for _, player in ipairs(Players:GetPlayers()) do
-        setupPlayerConnections(player)
-    end
-    
-    PlayerAddedConnection = Players.PlayerAdded:Connect(function(player)
-        debugPrint("PlayerAdded:", player.Name)
-        if IsEnabled then
-            task.wait(2)
-            setupPlayerConnections(player)
-        end
-    end)
-    
-    PlayerRemovingConnection = Players.PlayerRemoving:Connect(function(player)
-        debugPrint("PlayerRemoving:", player.Name)
-        removeHighlight(player)
-    end)
+    updateHighlights()
     
     UpdateConnection = RunService.Heartbeat:Connect(function()
         if IsEnabled then
@@ -305,40 +235,31 @@ function ESP:Enable()
     
     task.spawn(function()
         while IsEnabled do
-            periodicScan()
-            task.wait(2)
+            Scanner.RefreshAll()
+            updateHighlights()
+            task.wait(1)
         end
     end)
     
-    debugPrint("ESP Enabled!")
+    debugPrint("ESP V3 Enabled!")
 end
 
 function ESP:Disable()
     debugPrint("Disabling ESP...")
     IsEnabled = false
     
-    local playersToRemove = {}
-    for player, _ in pairs(Highlights) do
-        table.insert(playersToRemove, player)
+    local toRemove = {}
+    for character, _ in pairs(Highlights) do
+        table.insert(toRemove, character)
     end
     
-    for _, player in ipairs(playersToRemove) do
-        removeHighlight(player)
+    for _, character in ipairs(toRemove) do
+        removeHighlight(character)
     end
     
     if UpdateConnection then
         UpdateConnection:Disconnect()
         UpdateConnection = nil
-    end
-    
-    if PlayerAddedConnection then
-        PlayerAddedConnection:Disconnect()
-        PlayerAddedConnection = nil
-    end
-    
-    if PlayerRemovingConnection then
-        PlayerRemovingConnection:Disconnect()
-        PlayerRemovingConnection = nil
     end
     
     debugPrint("ESP Disabled!")
@@ -357,40 +278,16 @@ function ESP:IsEnabled()
 end
 
 function ESP:SetTeamCheck(option)
-    debugPrint("SetTeamCheck:", option)
-    if option == "Enemies Only" then
-        TeamCheckEnabled = true
-    else
-        TeamCheckEnabled = false
-    end
-    
-    if IsEnabled then
-        refreshAllHighlights()
-    end
+    debugPrint("Team check not applicable in PF (obfuscated names)")
 end
 
 function ESP:SetColor(color)
-    ESP_COLOR_ENEMY = color
-    for player, highlight in pairs(Highlights) do
-        if Scanner and Scanner.IsEnemy(player) then
-            pcall(function()
-                highlight.FillColor = color
-                highlight.OutlineColor = color
-            end)
-        end
-    end
-end
-
-function ESP:DebugPlayer(playerName)
-    if not Scanner then
-        debugPrint("Scanner not loaded")
-        return
-    end
-    
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player.Name == playerName or playerName == nil then
-            Scanner.DebugPlayer(player)
-        end
+    ESP_COLOR = color
+    for character, highlight in pairs(Highlights) do
+        pcall(function()
+            highlight.FillColor = color
+            highlight.OutlineColor = color
+        end)
     end
 end
 

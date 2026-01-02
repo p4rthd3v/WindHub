@@ -1,6 +1,7 @@
 --[[
-    WindHub Phantom Forces Game Scanner V2
-    Deep scans the ENTIRE game to find where characters are stored
+    WindHub Phantom Forces Game Scanner V3
+    Handles PF's obfuscated character names
+    Characters are in "Ignore" folder with encoded names
 ]]
 
 local Scanner = {}
@@ -8,13 +9,13 @@ Scanner.__index = Scanner
 
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local LocalPlayer = Players.LocalPlayer
 local DEBUG = true
 
-local CachedCharacterFolder = nil
-local CachedCharacters = {}
+local MyCharacter = nil
+local AllCharacters = {}
+local IgnoreFolder = nil
 
 local function debugPrint(...)
     if DEBUG then
@@ -22,220 +23,146 @@ local function debugPrint(...)
     end
 end
 
-local function findAllHumanoids()
-    debugPrint("=== DEEP SCANNING FOR ALL HUMANOIDS ===")
-    local found = {}
-    
-    for _, obj in ipairs(Workspace:GetDescendants()) do
-        if obj:IsA("Humanoid") then
-            local parent = obj.Parent
-            local grandparent = parent and parent.Parent
-            local path = ""
-            
-            if grandparent then
-                path = grandparent.Name .. "/" .. parent.Name
-            elseif parent then
-                path = parent.Name
-            end
-            
-            debugPrint("HUMANOID FOUND:", parent and parent.Name or "nil", "at", path)
-            debugPrint("  Parent class:", parent and parent.ClassName or "nil")
-            debugPrint("  Grandparent:", grandparent and grandparent.Name or "nil", grandparent and grandparent.ClassName or "")
-            debugPrint("  Health:", obj.Health, "/", obj.MaxHealth)
-            
-            if parent and parent:IsA("Model") then
-                table.insert(found, {
-                    Humanoid = obj,
-                    Character = parent,
-                    Container = grandparent,
-                    Name = parent.Name
-                })
-            end
-        end
+local function findIgnoreFolder()
+    IgnoreFolder = Workspace:FindFirstChild("Ignore")
+    if IgnoreFolder then
+        debugPrint("Found Ignore folder with", #IgnoreFolder:GetChildren(), "children")
+        return IgnoreFolder
     end
     
-    debugPrint("Total humanoids found:", #found)
-    return found
-end
-
-local function findCharacterContainer()
-    debugPrint("=== FINDING CHARACTER CONTAINER ===")
-    
-    local humanoids = findAllHumanoids()
-    local containerCounts = {}
-    
-    for _, data in ipairs(humanoids) do
-        if data.Container then
-            local name = data.Container.Name
-            containerCounts[name] = (containerCounts[name] or 0) + 1
-        end
-    end
-    
-    local bestContainer = nil
-    local bestCount = 0
-    
-    for name, count in pairs(containerCounts) do
-        debugPrint("Container:", name, "has", count, "characters")
-        if count > bestCount then
-            bestCount = count
-            bestContainer = name
-        end
-    end
-    
-    if bestContainer then
-        debugPrint("Most likely character container:", bestContainer)
-        
-        local container = Workspace:FindFirstChild(bestContainer)
-        if not container then
-            for _, child in ipairs(Workspace:GetChildren()) do
-                if child.Name == bestContainer then
-                    container = child
+    for _, child in ipairs(Workspace:GetChildren()) do
+        if child:IsA("Folder") then
+            local hasHumanoids = false
+            for _, obj in ipairs(child:GetChildren()) do
+                if obj:IsA("Model") and obj:FindFirstChildOfClass("Humanoid") then
+                    hasHumanoids = true
                     break
                 end
             end
+            if hasHumanoids then
+                debugPrint("Found character folder:", child.Name)
+                IgnoreFolder = child
+                return child
+            end
         end
-        
-        CachedCharacterFolder = container
-        return container
     end
     
     return nil
 end
 
-local function getCharacterFromContainer(playerName)
-    if not CachedCharacterFolder then
-        findCharacterContainer()
+local function getMyCharacterFromCamera()
+    local camera = Workspace.CurrentCamera
+    if not camera then return nil end
+    
+    local subject = camera.CameraSubject
+    if not subject then return nil end
+    
+    if subject:IsA("Humanoid") then
+        MyCharacter = subject.Parent
+        debugPrint("Found my character via camera:", MyCharacter.Name)
+        return MyCharacter
+    elseif subject:IsA("BasePart") then
+        MyCharacter = subject.Parent
+        debugPrint("Found my character via camera part:", MyCharacter.Name)
+        return MyCharacter
     end
     
-    if CachedCharacterFolder then
-        for _, child in ipairs(CachedCharacterFolder:GetChildren()) do
-            if child:IsA("Model") and child.Name == playerName then
+    return nil
+end
+
+local function getAllCharacterModels()
+    AllCharacters = {}
+    
+    if not IgnoreFolder then
+        findIgnoreFolder()
+    end
+    
+    if IgnoreFolder then
+        for _, child in ipairs(IgnoreFolder:GetChildren()) do
+            if child:IsA("Model") then
                 local humanoid = child:FindFirstChildOfClass("Humanoid")
                 if humanoid and humanoid.Health > 0 then
-                    return child
+                    table.insert(AllCharacters, child)
                 end
             end
         end
     end
     
-    return nil
-end
-
-local function findCharacterByHumanoidScan(playerName)
-    for _, obj in ipairs(Workspace:GetDescendants()) do
-        if obj:IsA("Humanoid") and obj.Health > 0 then
-            local parent = obj.Parent
-            if parent and parent:IsA("Model") and parent.Name == playerName then
-                return parent
+    for _, child in ipairs(Workspace:GetChildren()) do
+        if child:IsA("Model") and child ~= IgnoreFolder then
+            local humanoid = child:FindFirstChildOfClass("Humanoid")
+            if humanoid and humanoid.Health > 0 then
+                local alreadyAdded = false
+                for _, c in ipairs(AllCharacters) do
+                    if c == child then
+                        alreadyAdded = true
+                        break
+                    end
+                end
+                if not alreadyAdded then
+                    table.insert(AllCharacters, child)
+                end
             end
         end
     end
-    return nil
+    
+    debugPrint("Found", #AllCharacters, "total character models")
+    return AllCharacters
 end
 
 function Scanner.Init()
-    debugPrint("=== PHANTOM FORCES SCANNER V2 INITIALIZING ===")
-    debugPrint("LocalPlayer:", LocalPlayer.Name)
+    debugPrint("=== PHANTOM FORCES SCANNER V3 ===")
+    debugPrint("This version handles obfuscated character names")
+    debugPrint("")
+    
+    findIgnoreFolder()
+    
+    getMyCharacterFromCamera()
+    
+    getAllCharacterModels()
     
     debugPrint("")
-    debugPrint("=== WORKSPACE TOP LEVEL ===")
-    for _, child in ipairs(Workspace:GetChildren()) do
-        local childCount = 0
-        if child:IsA("Folder") or child:IsA("Model") then
-            childCount = #child:GetChildren()
-        end
-        debugPrint(child.ClassName, ":", child.Name, childCount > 0 and ("(" .. childCount .. " children)") or "")
+    debugPrint("=== ALL FOUND CHARACTERS ===")
+    for i, char in ipairs(AllCharacters) do
+        local isMe = (char == MyCharacter)
+        local humanoid = char:FindFirstChildOfClass("Humanoid")
+        debugPrint(i .. ".", char.Name, isMe and "(THIS IS ME)" or "", "Health:", humanoid and humanoid.Health or 0)
     end
     
     debugPrint("")
-    findCharacterContainer()
-    
-    debugPrint("")
-    debugPrint("=== TESTING PLAYER LOOKUP ===")
-    for _, player in ipairs(Players:GetPlayers()) do
-        local char = Scanner.GetCharacter(player)
-        if char then
-            debugPrint("SUCCESS: Found character for", player.Name)
-            local root = Scanner.GetRootPart(char)
-            debugPrint("  RootPart:", root and root.Name or "None")
-        else
-            debugPrint("FAILED: No character for", player.Name)
-        end
-    end
-    
-    debugPrint("")
-    debugPrint("=== LOCAL PLAYER CHARACTER ===")
-    local myChar = Scanner.GetCharacter(LocalPlayer)
-    if myChar then
-        debugPrint("Local character found!")
-        debugPrint("Parts in character:")
-        for _, part in ipairs(myChar:GetChildren()) do
-            debugPrint("  -", part.Name, "(" .. part.ClassName .. ")")
-        end
-    else
-        debugPrint("Local character NOT found via name lookup")
-        debugPrint("Trying camera subject...")
-        local camera = Workspace.CurrentCamera
-        if camera and camera.CameraSubject then
-            local subject = camera.CameraSubject
-            debugPrint("Camera subject:", subject.Name, subject.ClassName)
-            if subject:IsA("Humanoid") then
-                local char = subject.Parent
-                debugPrint("Found character via camera:", char.Name)
-                CachedCharacters[LocalPlayer] = char
-            end
-        end
-    end
-    
-    debugPrint("")
-    debugPrint("=== SCANNER V2 COMPLETE ===")
+    debugPrint("=== SCANNER V3 READY ===")
     
     return true
 end
 
-function Scanner.GetCharacter(player)
-    if CachedCharacters[player] then
-        local cached = CachedCharacters[player]
-        local humanoid = cached:FindFirstChildOfClass("Humanoid")
-        if humanoid and humanoid.Health > 0 and cached.Parent then
-            return cached
-        else
-            CachedCharacters[player] = nil
+function Scanner.GetMyCharacter()
+    if MyCharacter then
+        local humanoid = MyCharacter:FindFirstChildOfClass("Humanoid")
+        if humanoid and humanoid.Health > 0 and MyCharacter.Parent then
+            return MyCharacter
         end
     end
     
-    if player == LocalPlayer then
-        local camera = Workspace.CurrentCamera
-        if camera and camera.CameraSubject then
-            local subject = camera.CameraSubject
-            if subject:IsA("Humanoid") and subject.Parent then
-                CachedCharacters[player] = subject.Parent
-                return subject.Parent
+    return getMyCharacterFromCamera()
+end
+
+function Scanner.GetAllEnemyCharacters()
+    getAllCharacterModels()
+    getMyCharacterFromCamera()
+    
+    local enemies = {}
+    
+    for _, char in ipairs(AllCharacters) do
+        if char ~= MyCharacter then
+            local humanoid = char:FindFirstChildOfClass("Humanoid")
+            if humanoid and humanoid.Health > 0 then
+                table.insert(enemies, char)
             end
         end
     end
     
-    local char = getCharacterFromContainer(player.Name)
-    if char then
-        CachedCharacters[player] = char
-        return char
-    end
-    
-    char = findCharacterByHumanoidScan(player.Name)
-    if char then
-        CachedCharacters[player] = char
-        return char
-    end
-    
-    if player.Character then
-        local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
-        if humanoid and humanoid.Health > 0 then
-            CachedCharacters[player] = player.Character
-            return player.Character
-        end
-    end
-    
-    return nil
+    debugPrint("Found", #enemies, "enemy characters")
+    return enemies
 end
 
 function Scanner.GetRootPart(character)
@@ -255,11 +182,8 @@ function Scanner.GetRootPart(character)
     root = character:FindFirstChild("UpperTorso")
     if root then return root end
     
-    root = character:FindFirstChild("LowerTorso")
-    if root then return root end
-    
     for _, part in ipairs(character:GetChildren()) do
-        if part:IsA("BasePart") and part.Name ~= "Head" then
+        if part:IsA("BasePart") then
             return part
         end
     end
@@ -282,64 +206,18 @@ function Scanner.GetHead(character)
     return nil
 end
 
-function Scanner.IsEnemy(player)
-    return player ~= LocalPlayer
-end
-
-function Scanner.GetTeamColor(player)
-    return Color3.fromRGB(255, 75, 75)
-end
-
-function Scanner.RefreshCache()
-    CachedCharacters = {}
-    CachedCharacterFolder = nil
-    findCharacterContainer()
-end
-
-function Scanner.GetAllPlayers()
-    local players = {}
-    
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer then
-            local char = Scanner.GetCharacter(player)
-            if char then
-                table.insert(players, {
-                    Player = player,
-                    Character = char,
-                    IsEnemy = Scanner.IsEnemy(player)
-                })
-            end
-        end
+function Scanner.IsMyCharacter(character)
+    if not MyCharacter then
+        getMyCharacterFromCamera()
     end
-    
-    return players
+    return character == MyCharacter
 end
 
-function Scanner.DebugPlayer(player)
-    debugPrint("=== DEBUG PLAYER:", player.Name, "===")
-    
-    local char = Scanner.GetCharacter(player)
-    debugPrint("Character found:", char and "Yes" or "No")
-    
-    if char then
-        debugPrint("Character parent:", char.Parent and char.Parent.Name or "nil")
-        
-        local root = Scanner.GetRootPart(char)
-        debugPrint("RootPart:", root and root.Name or "No")
-        
-        local head = Scanner.GetHead(char)
-        debugPrint("Head:", head and "Yes" or "No")
-        
-        local humanoid = char:FindFirstChildOfClass("Humanoid")
-        if humanoid then
-            debugPrint("Humanoid Health:", humanoid.Health)
-        end
-        
-        debugPrint("All parts:")
-        for _, part in ipairs(char:GetChildren()) do
-            debugPrint("  -", part.Name, "(" .. part.ClassName .. ")")
-        end
-    end
+function Scanner.RefreshAll()
+    debugPrint("Refreshing scanner...")
+    findIgnoreFolder()
+    getMyCharacterFromCamera()
+    getAllCharacterModels()
 end
 
 return Scanner

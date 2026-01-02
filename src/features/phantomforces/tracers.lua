@@ -1,7 +1,7 @@
 --[[
-    WindHub Phantom Forces Tracers Feature
-    Uses Scanner module for robust character detection
-    Debug mode enabled for troubleshooting
+    WindHub Phantom Forces Tracers V3
+    Works with obfuscated character names
+    Draws lines to all enemy characters
 ]]
 
 local Tracers = {}
@@ -35,9 +35,6 @@ local LocalPlayer = Players.LocalPlayer
 local IsEnabled = false
 local TracerLines = {}
 local UpdateConnection = nil
-local CharacterConnections = {}
-local PlayerAddedConnection = nil
-local PlayerRemovingConnection = nil
 
 local DEBUG = true
 
@@ -51,27 +48,14 @@ local function debugPrint(...)
     end
 end
 
-local function createTracer(player)
-    if player == LocalPlayer then return end
-    if not Scanner then
-        debugPrint("Scanner not loaded!")
-        return
-    end
+local function createTracer(character)
+    if not character then return end
+    if TracerLines[character] then return end
     
-    local character = Scanner.GetCharacter(player)
-    if not character then
-        debugPrint("No character for tracer:", player.Name)
-        return
-    end
-    
-    debugPrint("Creating tracer for:", player.Name)
-    
-    if TracerLines[player] then
-        pcall(function() TracerLines[player]:Destroy() end)
-    end
+    debugPrint("Creating tracer for:", character.Name)
     
     local beam = Instance.new("Part")
-    beam.Name = "WindHubTracer_" .. player.Name
+    beam.Name = "WindHubTracer"
     beam.Anchored = true
     beam.CanCollide = false
     beam.CanQuery = false
@@ -82,53 +66,23 @@ local function createTracer(player)
     beam.CastShadow = false
     beam.Parent = Workspace
     
-    TracerLines[player] = beam
-    debugPrint("Tracer created for:", player.Name)
+    TracerLines[character] = beam
 end
 
-local function removeTracer(player)
-    if TracerLines[player] then
+local function removeTracer(character)
+    if TracerLines[character] then
         pcall(function()
-            TracerLines[player]:Destroy()
+            TracerLines[character]:Destroy()
         end)
-        TracerLines[player] = nil
-        debugPrint("Tracer removed for:", player.Name)
-    end
-    if CharacterConnections[player] then
-        pcall(function()
-            CharacterConnections[player]:Disconnect()
-        end)
-        CharacterConnections[player] = nil
-    end
-end
-
-local function setupPlayerConnections(player)
-    if player == LocalPlayer then return end
-    
-    if CharacterConnections[player] then
-        pcall(function() CharacterConnections[player]:Disconnect() end)
-    end
-    
-    CharacterConnections[player] = player.CharacterAdded:Connect(function()
-        debugPrint("CharacterAdded for tracer:", player.Name)
-        if IsEnabled then
-            task.wait(1.5)
-            createTracer(player)
-        end
-    end)
-    
-    if IsEnabled then
-        task.spawn(function()
-            task.wait(0.5)
-            createTracer(player)
-        end)
+        TracerLines[character] = nil
     end
 end
 
 local function updateTracers()
     if not Scanner then return end
+    if not IsEnabled then return end
     
-    local myChar = Scanner.GetCharacter(LocalPlayer)
+    local myChar = Scanner.GetMyCharacter()
     if not myChar then return end
     
     local myRoot = Scanner.GetRootPart(myChar)
@@ -136,21 +90,43 @@ local function updateTracers()
     
     local myPos = myRoot.Position
     
-    for player, beam in pairs(TracerLines) do
+    local enemies = Scanner.GetAllEnemyCharacters()
+    
+    for _, character in ipairs(enemies) do
+        if not TracerLines[character] then
+            createTracer(character)
+        end
+    end
+    
+    local toRemove = {}
+    for character, beam in pairs(TracerLines) do
+        local stillExists = false
+        for _, enemy in ipairs(enemies) do
+            if enemy == character then
+                stillExists = true
+                break
+            end
+        end
+        
+        if not stillExists then
+            table.insert(toRemove, character)
+        end
+    end
+    
+    for _, character in ipairs(toRemove) do
+        removeTracer(character)
+    end
+    
+    for character, beam in pairs(TracerLines) do
         if beam and beam.Parent then
-            local character = Scanner.GetCharacter(player)
-            if character then
-                local targetRoot = Scanner.GetRootPart(character)
-                if targetRoot then
-                    local targetPos = targetRoot.Position
-                    local distance = (targetPos - myPos).Magnitude
-                    local midpoint = (myPos + targetPos) / 2
-                    
-                    beam.Size = Vector3.new(TRACER_THICKNESS / 10, TRACER_THICKNESS / 10, distance)
-                    beam.CFrame = CFrame.lookAt(midpoint, targetPos)
-                else
-                    beam.Size = Vector3.new(0, 0, 0)
-                end
+            local targetRoot = Scanner.GetRootPart(character)
+            if targetRoot then
+                local targetPos = targetRoot.Position
+                local distance = (targetPos - myPos).Magnitude
+                local midpoint = (myPos + targetPos) / 2
+                
+                beam.Size = Vector3.new(TRACER_THICKNESS / 10, TRACER_THICKNESS / 10, distance)
+                beam.CFrame = CFrame.lookAt(midpoint, targetPos)
             else
                 beam.Size = Vector3.new(0, 0, 0)
             end
@@ -158,56 +134,20 @@ local function updateTracers()
     end
 end
 
-local function periodicScan()
-    if not IsEnabled then return end
-    if not Scanner then return end
-    
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer then
-            local hasTracer = TracerLines[player] ~= nil
-            local character = Scanner.GetCharacter(player)
-            
-            if character and not hasTracer then
-                debugPrint("Periodic scan found new character:", player.Name)
-                createTracer(player)
-            elseif not character and hasTracer then
-                debugPrint("Periodic scan removing dead/missing:", player.Name)
-                removeTracer(player)
-            end
-        end
-    end
-end
-
 function Tracers:Enable()
     if IsEnabled then return end
-    debugPrint("Enabling Tracers...")
+    debugPrint("Enabling Tracers V3...")
     
     IsEnabled = true
     
     Scanner = loadModule("features/phantomforces/scanner.lua")
     if Scanner then
         debugPrint("Scanner loaded!")
+        Scanner.Init()
     else
         debugPrint("ERROR: Failed to load scanner!")
         return
     end
-    
-    for _, player in ipairs(Players:GetPlayers()) do
-        setupPlayerConnections(player)
-    end
-    
-    PlayerAddedConnection = Players.PlayerAdded:Connect(function(player)
-        debugPrint("PlayerAdded:", player.Name)
-        if IsEnabled then
-            task.wait(2)
-            setupPlayerConnections(player)
-        end
-    end)
-    
-    PlayerRemovingConnection = Players.PlayerRemoving:Connect(function(player)
-        debugPrint("PlayerRemoving:", player.Name)
-        removeTracer(player)
-    end)
     
     UpdateConnection = RunService.Heartbeat:Connect(function()
         if IsEnabled then
@@ -217,40 +157,30 @@ function Tracers:Enable()
     
     task.spawn(function()
         while IsEnabled do
-            periodicScan()
-            task.wait(2)
+            Scanner.RefreshAll()
+            task.wait(1)
         end
     end)
     
-    debugPrint("Tracers Enabled!")
+    debugPrint("Tracers V3 Enabled!")
 end
 
 function Tracers:Disable()
     debugPrint("Disabling Tracers...")
     IsEnabled = false
     
-    local playersToRemove = {}
-    for player, _ in pairs(TracerLines) do
-        table.insert(playersToRemove, player)
+    local toRemove = {}
+    for character, _ in pairs(TracerLines) do
+        table.insert(toRemove, character)
     end
     
-    for _, player in ipairs(playersToRemove) do
-        removeTracer(player)
+    for _, character in ipairs(toRemove) do
+        removeTracer(character)
     end
     
     if UpdateConnection then
         UpdateConnection:Disconnect()
         UpdateConnection = nil
-    end
-    
-    if PlayerAddedConnection then
-        PlayerAddedConnection:Disconnect()
-        PlayerAddedConnection = nil
-    end
-    
-    if PlayerRemovingConnection then
-        PlayerRemovingConnection:Disconnect()
-        PlayerRemovingConnection = nil
     end
     
     debugPrint("Tracers Disabled!")
